@@ -9,3 +9,5 @@ dist.sh
 
 .venv/
 long_term_tsf/dataset/
+visionts_items/
+bivisionts_versions_n_backpus/

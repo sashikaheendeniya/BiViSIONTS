@@ -12,5 +12,7 @@ long_term_tsf/dataset/
 visionts_items/
 bivisionts_versions_n_backpus/
 *.csv
-BiViSIONTS_INFO.ipynb
+*.png
+# BiViSIONTS_INFO.ipynb
+BiViSIONTS_INFO_V1.ipynb
 VisionTS.ipynb

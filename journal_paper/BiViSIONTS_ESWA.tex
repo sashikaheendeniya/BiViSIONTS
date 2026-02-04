@@ -1,0 +1,701 @@
+%% Expert Systems with Applications - Elsevier
+%% BiViSIONTS Journal Paper
+%% Use elsarticle document class
+
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+
+%% Use the option review to obtain double line spacing
+%% \documentclass[authoryear,preprint,review,12pt]{elsarticle}
+
+%% Packages
+\usepackage{lineno}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{subcaption}
+\usepackage{xcolor}
+
+%% For double-blind review, comment out the following
+%% \modulolinenumbers[5]
+
+\journal{Expert Systems with Applications}
+
+%%%%%%%%%%%%%%%%%%%%%%%
+%% Elsevier bibliography styles
+%%%%%%%%%%%%%%%%%%%%%%%
+%% To change the style, put a % in front of the second line of the current style and
+%% remove the % from the second line of the style you would like to use.
+%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Numbered
+%\bibliographystyle{model1-num-names}
+
+%% Numbered without titles
+%\bibliographystyle{model1a-num-names}
+
+%% Harvard
+%\bibliographystyle{model2-names.bst}\biboptions{authoryear}
+
+%% Vancouver numbered
+%\usepackage{numcompress}\bibliographystyle{model3-num-names}
+
+%% Vancouver name/year
+%\usepackage{numcompress}\bibliographystyle{model4-names}\biboptions{authoryear}
+
+%% APA style (required by ESWA)
+\bibliographystyle{model5-names}\biboptions{authoryear}
+
+%% APA, Harvard and Vancouver are akin styles, using author-year references
+%% If you want to use a different referencing style, you can define your own
+%% in another bst file
+
+%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+
+\begin{frontmatter}
+
+%% Title - concise and informative
+\title{BiViSIONTS: Bivariate Vision Transformer for Time Series Forecasting with Multi-Scale Attention-Weighted Fusion}
+
+%% Authors - for double-blind review, submit without author info in a separate title page
+%% Group authors per affiliation:
+\author[uom]{Eng. H.K.S.N. Heendeniya\corref{cor1}}
+\ead{sashika.heendeniya@gmail.com}
+
+\author[uom]{Dr. Thanuja Ambegoda}
+\ead{thanuja@cse.mrt.ac.lk}
+
+\cortext[cor1]{Corresponding author}
+
+\affiliation[uom]{organization={Department of Computer Science \& Engineering, University of Moratuwa},
+            city={Moratuwa},
+            postcode={10400},
+            country={Sri Lanka}}
+
+\begin{abstract}
+%% Abstract (max 250 words)
+Time series forecasting is fundamental to domains ranging from telecommunications network optimization to energy demand prediction. Recent advances demonstrate that Vision Transformers (ViT) with Masked Autoencoder (MAE) pre-training can effectively model temporal patterns by treating time series as images. However, existing approaches like VisionTS are limited to univariate forecasting, neglecting interdependencies between correlated variables ubiquitous in real-world applications.
+
+This paper introduces BiViSIONTS, a novel framework extending vision-based time series modeling to bivariate forecasting through multi-scale correlation-weighted fusion. Our approach encodes two correlated time series into RGB images where individual variables occupy separate channels, with the third channel containing adaptive fusion computed using correlation-based attention weights at short-term, medium-term, and long-term temporal scales. The multi-scale mechanism captures scale-dependent correlation patterns, with weighted combination (0.5:0.3:0.2) prioritizing recent dynamics while incorporating long-term stability.
+
+Evaluation on real-world telecommunications data demonstrates BiViSIONTS achieves 96.06\% forecast accuracy on challenging 300-step horizons, substantially outperforming LSTM (85.84\%), ARIMA (91.96\%), and univariate VisionTS (92.50\%). Ablation studies validate that multi-scale attention contributes +1.47\% improvement over single-scale approaches, while adaptive correlation weighting adds +0.62\% over fixed uniform allocation. Cross-dataset validation on Beijing Air Quality data confirms generalizability, achieving 77.01\% success where ARIMA completely fails (0\% with negative correlations). The framework demonstrates exceptional stability ($\sigma < 1.21\%$) across 1,000 iterations, confirming production-ready reliability. Our results establish that vision-based approaches can effectively model inter-variable dependencies in bivariate time series without task-specific fine-tuning.
+\end{abstract}
+
+%%Graphical abstract
+%\begin{graphicalabstract}
+%\includegraphics{grabs}
+%\end{graphicalabstract}
+
+%%Research highlights (3-5 bullet points, max 85 characters each)
+\begin{highlights}
+\item Novel RGB encoding fuses bivariate series via correlation-weighted attention
+\item Multi-scale temporal mechanism captures short, medium, and long-term patterns
+\item Achieves 96.06\% accuracy on 300-step forecasts, +10.2\% over LSTM
+\item Zero-shot transfer from ImageNet without task-specific fine-tuning
+\item Cross-domain validation on telecommunications and environmental datasets
+\end{highlights}
+
+\begin{keyword}
+%% keywords (1-7)
+Time Series Forecasting \sep Vision Transformer \sep Masked Autoencoder \sep Multivariate Time Series \sep Multi-Scale Attention \sep Deep Learning \sep Telecommunications
+\end{keyword}
+
+\end{frontmatter}
+
+%% \linenumbers  %% uncomment for review version
+
+%% =============================================================================
+%% SECTION 1: INTRODUCTION
+%% =============================================================================
+\section{Introduction}
+\label{sec:introduction}
+
+Time series forecasting is fundamental to decision-making across diverse domains including telecommunications network optimization, financial risk management, energy demand prediction, and healthcare monitoring. The ability to accurately predict future values based on historical observations enables proactive resource allocation, anomaly detection, and strategic planning. In telecommunications specifically, forecasting network traffic and user connectivity patterns is crucial for capacity planning, quality of service maintenance, and infrastructure investment decisions \citep{lim2021}.
+
+Traditional forecasting methods such as ARIMA \citep{box1970}, exponential smoothing, and Vector Autoregression (VAR) \citep{sims1980} have been widely adopted due to their interpretability and computational efficiency. However, these classical approaches struggle with complex non-linear patterns and long-range dependencies. Deep learning alternatives, including Long Short-Term Memory (LSTM) networks \citep{hochreiter1997} and Transformer architectures \citep{vaswani2017}, have demonstrated superior performance on challenging forecasting tasks, yet often require substantial training data and computational resources.
+
+A particularly intriguing recent development is the application of computer vision techniques to time series analysis. The VisionTS framework \citep{visionts2024} demonstrated that Vision Transformers (ViT) with Masked Autoencoder (MAE) pre-training \citep{he2022mae}, originally designed for image recognition on ImageNet, can achieve remarkable zero-shot forecasting performance by treating time series as images. This approach leverages powerful feature extraction capabilities learned from millions of natural images without task-specific fine-tuning.
+
+However, VisionTS and most existing deep learning forecasting methods focus on \textbf{univariate} time series. In real-world scenarios, multiple time series are often \textbf{correlated} and jointly influence system behavior. In telecommunications networks, for example, downlink traffic volume and connected users exhibit strong correlations. Ignoring these interdependencies and treating each variable independently can lead to suboptimal forecasts. Moreover, temporal correlations can be \textbf{scale-dependent}, with variables exhibiting different correlation patterns at short-term, medium-term, and long-term horizons.
+
+This paper introduces \textbf{BiViSIONTS (Bivariate Vision Transformer for Time Series)}, extending vision-based forecasting to bivariate settings through multi-scale attention-weighted fusion. Our contributions include:
+
+\begin{enumerate}
+    \item \textbf{Novel bivariate RGB encoding} representing two correlated time series with correlation-weighted fusion in the third channel, enabling Vision Transformers to simultaneously process both variables and their interaction patterns.
+    
+    \item \textbf{Multi-scale temporal attention mechanism} computing correlation coefficients at short-term, medium-term, and long-term windows, with weighted combination (0.5:0.3:0.2) prioritizing recent patterns while incorporating long-term stability.
+    
+    \item \textbf{Comprehensive empirical evaluation} on telecommunications data achieving 96.06\% accuracy on 300-step horizons, with systematic ablation studies validating component contributions (+1.47\% from multi-scale attention, +0.62\% from adaptive weighting).
+    
+    \item \textbf{Cross-domain generalization} validated on Beijing Air Quality data, achieving 77.01\% success where traditional ARIMA fails completely (0\% success with negative correlations).
+\end{enumerate}
+
+The remainder of this paper is organized as follows: Section~\ref{sec:related} reviews related work; Section~\ref{sec:methodology} presents the BiViSIONTS framework; Section~\ref{sec:experiments} describes experimental setup; Section~\ref{sec:results} reports results and analysis; Section~\ref{sec:discussion} discusses implications and limitations; Section~\ref{sec:conclusion} concludes with future directions.
+
+%% =============================================================================
+%% SECTION 2: RELATED WORK
+%% =============================================================================
+\section{Related Work}
+\label{sec:related}
+
+\subsection{Classical Time Series Forecasting}
+
+Traditional statistical methods dominated forecasting for decades. ARIMA models \citep{box1970} capture autoregressive and moving average components, while VAR \citep{sims1980} extends this to multivariate settings through cross-lagged relationships. Exponential smoothing methods \citep{holt1957} provide simple yet effective trend and seasonality modeling. However, these approaches assume linear relationships, stationarity, and struggle with complex non-linear patterns beyond several dozen time steps.
+
+\subsection{Deep Learning for Time Series}
+
+Deep learning revolutionized forecasting through automatic feature learning. Recurrent architectures including LSTM \citep{hochreiter1997} and GRU \citep{cho2014} enabled sequential dependency modeling but suffer from vanishing gradients and sequential processing limitations. Temporal Convolutional Networks \citep{bai2018} and WaveNet \citep{oord2016} offered parallelizable training through dilated convolutions.
+
+The Transformer architecture \citep{vaswani2017} addressed long-range dependency limitations through self-attention mechanisms. Notable adaptations include: Informer \citep{zhou2021informer} achieving $O(L \log L)$ complexity through ProbSparse attention; Autoformer \citep{wu2021autoformer} discovering period-based dependencies via auto-correlation; FEDformer \citep{zhou2022fedformer} operating in frequency domain; PatchTST \citep{nie2023patchtst} applying patching for efficiency; and iTransformer \citep{liu2024itransformer} inverting token representation for multivariate correlations.
+
+\subsection{Vision-Based Time Series Forecasting}
+
+A novel paradigm leverages computer vision by converting temporal data into image representations. Gramian Angular Fields and Recurrence Plots \citep{wang2015} enable CNN application but have limited forecasting utility. 
+
+\textbf{VisionTS} \citep{visionts2024} achieved breakthrough results by leveraging ViT-Base models pre-trained with MAE self-supervised learning \citep{he2022mae}. It converts univariate time series into 2D matrices, replicates to RGB channels, and applies patching for Transformer processing. VisionTS demonstrated effective transfer learning from natural images without task-specific fine-tuning.
+
+\textbf{Critical Gap:} VisionTS is exclusively univariate—its channel replication doesn't leverage inter-variable relationships, the encoding doesn't adapt to correlation patterns, and it lacks multi-scale temporal dynamics consideration.
+
+\subsection{Multivariate Forecasting and Correlation Modeling}
+
+Modeling correlated time series is challenging. Deep approaches include DeepAR \citep{salinas2020} with autoregressive RNN, N-BEATS \citep{oreshkin2020} with interpretable decomposition, and Temporal Fusion Transformers \citep{lim2021} with variable selection. Graph Neural Networks model spatial-temporal dependencies through graph structures \citep{li2018dcrnn,wu2019graph}.
+
+Correlation-aware methods like CoST \citep{woo2022cost} and CorrFormer explicitly incorporate correlation information, but either learn correlations implicitly through training (requiring large datasets), use static estimates (non-adaptive), or apply uniform weighting across temporal scales.
+
+\textbf{Gap:} No existing method computes adaptive attention weights directly from multi-scale correlations for vision-based bivariate forecasting without extensive training.
+
+%% =============================================================================
+%% SECTION 3: METHODOLOGY
+%% =============================================================================
+\section{Methodology}
+\label{sec:methodology}
+
+\subsection{Problem Formulation}
+
+Consider two correlated time series:
+\begin{align}
+    S_1 &= \{s_1^{(1)}, s_2^{(1)}, \ldots, s_T^{(1)}\} \quad \text{(e.g., Traffic Volume)} \\
+    S_2 &= \{s_1^{(2)}, s_2^{(2)}, \ldots, s_T^{(2)}\} \quad \text{(e.g., Connected Users)}
+\end{align}
+
+Given a context window of length $L_c$ and prediction horizon $L_p$, the task is to predict future values $\hat{S}_1^{future}$ and $\hat{S}_2^{future}$ based on historical context $S_1^{context}$ and $S_2^{context}$.
+
+\textbf{Key Challenge:} Effectively model interdependencies between $S_1$ and $S_2$ while capturing temporal patterns at multiple scales.
+
+\subsection{BiViSIONTS Framework Overview}
+
+The BiViSIONTS framework consists of five stages (Fig.~\ref{fig:framework}):
+\begin{enumerate}
+    \item \textbf{Data Preparation:} Load and preprocess bivariate time series
+    \item \textbf{Multi-Scale Correlation Analysis:} Compute correlations at short, medium, and long temporal scales
+    \item \textbf{Attention-Weighted RGB Encoding:} Convert bivariate series into RGB image with adaptive fusion
+    \item \textbf{MAE-Based Reconstruction:} Apply masked autoencoder for image reconstruction
+    \item \textbf{Forecast Decoding:} Extract predictions from reconstructed image
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{images/Figure 3.1 (conceptual diagram).jpg}
+\caption{BiViSIONTS architecture: Bivariate input $[S_1, S_2]$ undergoes multi-scale correlation analysis computing $\alpha_{short}$, $\alpha_{medium}$, $\alpha_{long}$, followed by weighted combination to derive $\alpha_{final}$. RGB channels encode: Red ($S_1^{norm}$), Green ($S_2^{norm}$), Blue (attention-weighted fusion). The 224$\times$224 image is processed through MAE encoder-decoder with 75--90\% masking, producing forecast predictions.}
+\label{fig:framework}
+\end{figure}
+
+\subsection{Multi-Scale Correlation Analysis}
+
+For two time series segments $X$ and $Y$, the Pearson correlation coefficient is:
+\begin{equation}
+    \rho(X, Y) = \frac{\sum_{i=1}^{n}(x_i - \bar{x})(y_i - \bar{y})}{\sqrt{\sum_{i=1}^{n}(x_i - \bar{x})^2} \sqrt{\sum_{i=1}^{n}(y_i - \bar{y})^2}}
+\end{equation}
+
+We compute correlations at three temporal scales:
+\begin{itemize}
+    \item \textbf{Short-term} $\rho_{short}$: Over last $w_s$ steps (e.g., 150 days)
+    \item \textbf{Medium-term} $\rho_{medium}$: Over last $w_m$ steps (e.g., 400 days)
+    \item \textbf{Long-term} $\rho_{long}$: Over full available context
+\end{itemize}
+
+Each correlation is converted to attention weight via normalization:
+\begin{equation}
+    \alpha_{scale} = \frac{\rho_{scale} + 1}{2}, \quad scale \in \{short, medium, long\}
+\end{equation}
+
+The final attention weight combines scale-specific weights:
+\begin{equation}
+    \alpha_{final} = \lambda_s \cdot \alpha_{short} + \lambda_m \cdot \alpha_{medium} + \lambda_l \cdot \alpha_{long}
+\end{equation}
+where $\lambda_s = 0.5$, $\lambda_m = 0.3$, $\lambda_l = 0.2$, prioritizing recent patterns while incorporating long-term stability.
+
+\textbf{Rationale for Pearson Correlation:} We employ Pearson correlation rather than non-linear measures (mutual information, distance correlation) for three reasons: (1) exploratory analysis revealed strong linear correlations (0.77--0.98) between features; (2) computational efficiency ($O(n)$ vs. $O(n^2 \log n)$) is critical for multi-site forecasting; (3) physical relationships in telecommunications are approximately linear.
+
+\subsection{Attention-Weighted RGB Encoding}
+
+\subsubsection{Series Reshaping}
+
+Truncate series to make length divisible by periodicity $P$:
+\begin{equation}
+    L_{usable} = L_{total} - (L_{total} \bmod P)
+\end{equation}
+
+Reshape into 2D matrices:
+\begin{align}
+    M_1 &= \text{reshape}(S_1', (L_{usable}/P, P)) \\
+    M_2 &= \text{reshape}(S_2', (L_{usable}/P, P))
+\end{align}
+
+\subsubsection{Normalization and RGB Construction}
+
+Normalize each matrix independently to $[0, 1]$:
+\begin{equation}
+    M_i^{norm} = \frac{M_i - \min(M_i)}{\max(M_i) - \min(M_i)}
+\end{equation}
+
+Construct RGB channels with semantic meaning:
+\begin{align}
+    R &= M_1^{norm} \quad \text{(Variable 1: Traffic)} \\
+    G &= M_2^{norm} \quad \text{(Variable 2: Users)} \\
+    B &= \alpha_{final} \cdot M_1^{norm} + (1 - \alpha_{final}) \cdot M_2^{norm} \quad \text{(Fusion)}
+\end{align}
+
+This three-channel design enables simultaneous processing of both variables independently (R, G) while learning from their correlation-weighted combination (B).
+
+\subsection{Masked Autoencoder Architecture}
+
+For input image $I_{input} \in \mathbb{R}^{224 \times 224 \times 3}$ with patch size 16:
+\begin{equation}
+    \text{Number of patches} = \frac{224}{16} \times \frac{224}{16} = 196
+\end{equation}
+
+Each patch is flattened, linearly projected, and combined with positional encodings. Random masking with ratio $r_{mask}$ (75--90\%) is applied:
+\begin{equation}
+    \text{Masked patches} = \lfloor r_{mask} \times 196 \rfloor
+\end{equation}
+
+The \textbf{encoder} (ViT-Base: 12 layers, 768 dimensions, 12 heads) processes only visible patches:
+\begin{equation}
+    H_{latent} = \text{Encoder}(Z_{visible})
+\end{equation}
+
+The \textbf{decoder} (8 layers, 512 dimensions, 16 heads) reconstructs all patches using learnable mask tokens:
+\begin{equation}
+    I_{reconstructed} = \text{Decoder}(H_{latent}, \text{mask\_tokens})
+\end{equation}
+
+\subsection{Forecast Decoding}
+
+The reconstructed image is resized to original dimensions, channels separated, denormalized using stored parameters, and forecast portions extracted:
+\begin{align}
+    \hat{S}_1^{forecast} &= \tilde{S}_1[-L_p:] \\
+    \hat{S}_2^{forecast} &= \tilde{S}_2[-L_p:]
+\end{align}
+
+\subsection{Computational Complexity}
+
+\textbf{Time Complexity:} Dominated by MAE forward pass: $O(N_{visible}^2 \cdot d_{model})$ where $N_{visible} = (1 - r_{mask}) \times 196$.
+
+\textbf{Space Complexity:} Model contains $\sim$126M parameters (86M encoder, 40M decoder); intermediate activations scale as $O(N \cdot d_{model})$.
+
+%% =============================================================================
+%% SECTION 4: EXPERIMENTAL SETUP
+%% =============================================================================
+\section{Experimental Setup}
+\label{sec:experiments}
+
+\subsection{Datasets}
+
+\subsubsection{Primary Dataset: Dialog Axiata Telecommunications}
+
+Real-world network data from Dialog Axiata PLC, Sri Lanka's leading mobile operator:
+\begin{itemize}
+    \item \textbf{Variables:} Downlink traffic volume (GB), Connected users
+    \item \textbf{Temporal span:} 1,018 daily observations
+    \item \textbf{Context/Forecast:} 918/100 (primary), 718/300 (extended)
+    \item \textbf{Correlation structure:} $\rho_{short}=0.77$, $\rho_{medium}=0.82$, $\rho_{long}=0.98$
+\end{itemize}
+
+\subsubsection{Cross-Validation Dataset: Beijing Air Quality}
+
+Publicly available environmental data from UCI Repository:
+\begin{itemize}
+    \item \textbf{Variables:} Dewpoint temperature (DEWP), Ambient temperature (TEMP)
+    \item \textbf{Temporal span:} 1,826 daily observations (hourly aggregated)
+    \item \textbf{Context/Forecast:} 1,526/300
+\end{itemize}
+
+\subsection{Evaluation Metrics}
+
+\subsubsection{Primary Metric: Forecast Accuracy (WMAPE-based)}
+
+\begin{equation}
+    \text{WMAPE} = \frac{\sum_{t=1}^{L_p} |y_t - \hat{y}_t|}{\sum_{t=1}^{L_p} |y_t|} \times 100\%
+\end{equation}
+\begin{equation}
+    \text{Forecast Accuracy} = \max\left(0, \min\left(1, \frac{100 - \text{WMAPE}}{100}\right)\right) \times 100\%
+\end{equation}
+
+\subsubsection{Standard Error Metrics}
+
+MSE, MAE, and RMSE provide complementary accuracy assessment.
+
+\subsubsection{Trend-Following Metrics}
+
+Pearson correlation ($\rho$), Spearman correlation, and coefficient of determination ($R^2$) assess temporal pattern fidelity.
+
+\subsubsection{Composite Performance Index (CPI)}
+
+\begin{equation}
+    \text{CPI} = \sum_{m \in M} w_m \cdot \text{Norm}(m) \times 100
+\end{equation}
+where $M = \{\text{MSE, MAE, RMSE, Success, Pearson, Spearman, } R^2\}$ with weights balancing standard accuracy (58\%) and trend-following (42\%).
+
+\subsection{Baseline Methods}
+
+\begin{itemize}
+    \item \textbf{ARIMA:} Optimal orders via AIC search over $p,d,q \in [0,3] \times [0,2] \times [0,2]$
+    \item \textbf{VAR:} Vector autoregression with optimal lag selection via AIC
+    \item \textbf{LSTM:} Two-layer architecture (50 hidden units, 0.2 dropout, 50-step lookback)
+    \item \textbf{VisionTS:} Univariate vision-based baseline with identical MAE architecture
+\end{itemize}
+
+\subsection{Hyperparameter Configuration}
+
+Grid search over 216 configurations:
+\begin{itemize}
+    \item Mask ratio: $\{0.75, 0.80, 0.85, 0.90\}$
+    \item Periodicity: $\{1, 7, 14, 21, 28, 30\}$
+    \item Short window: $\{50, 100, 150\}$ days
+    \item Medium window: $\{200, 300, 400\}$ days
+\end{itemize}
+
+\textbf{Optimal configuration:} mask=0.85, periodicity=1, short=150, medium=400.
+
+\subsection{Implementation Details}
+
+\textbf{Software:} Python 3.10+, PyTorch 1.13+, torchvision 0.14+.
+
+\textbf{Hardware:} Intel Core i7/AMD Ryzen 7 CPU, optional NVIDIA RTX 3090 GPU, 32GB RAM.
+
+\textbf{Reproducibility:} Fixed random seed (42); pre-trained MAE weights (mae\_visualize\_vit\_base.pth).
+
+\textbf{Runtime:} Single forecast: $\sim$5 seconds; 1,000-iteration convergence analysis: $\sim$3.4 minutes.
+
+%% =============================================================================
+%% SECTION 5: RESULTS
+%% =============================================================================
+\section{Results and Analysis}
+\label{sec:results}
+
+\subsection{Multi-Scale Correlation Analysis}
+
+Table~\ref{tab:multiscale} presents scale-dependent correlation patterns revealing progressively stronger relationships at longer horizons.
+
+\begin{table}[htbp]
+\centering
+\caption{Multi-scale correlation structure and attention weights}
+\label{tab:multiscale}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Scale} & \textbf{Window} & \textbf{$\rho$} & \textbf{$\alpha$} & \textbf{Weight ($\lambda$)} \\
+\midrule
+Short-term & 150 days & 0.7709 & 0.8854 & 0.5 \\
+Medium-term & 400 days & 0.8239 & 0.9119 & 0.3 \\
+Long-term & 1,018 days & 0.9810 & 0.9905 & 0.2 \\
+\midrule
+\textbf{Final} & \textbf{Weighted} & \textbf{--} & \textbf{0.9144} & \textbf{1.0} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The progression from moderate short-term ($\rho=0.77$) to near-perfect long-term correlation ($\rho=0.98$) validates the multi-scale approach: transient events cause short-term divergence while aggregate behavior drives long-term synchrony. The final $\alpha_{final}=0.9144$ allocates 91.44\% weight to traffic and 8.56\% to users.
+
+\subsection{Hyperparameter Sensitivity Analysis}
+
+Fig.~\ref{fig:sensitivity} presents parameter sensitivity revealing periodicity as the dominant factor.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{images/Figure 5.2 Hyperparameter Optimization Results.png}
+\caption{Hyperparameter sensitivity: (a) Mask ratio optimal at 0.85 (97.1\%); (b) Periodicity=1 substantially outperforms higher values (4.6pp gap); (c) Short window shows monotonic improvement (50$\rightarrow$150); (d) Medium window similarly improves (200$\rightarrow$400).}
+\label{fig:sensitivity}
+\end{figure}
+
+Key findings:
+\begin{itemize}
+    \item \textbf{Periodicity:} Most critical parameter (4.6pp sensitivity range); periodicity=1 preserves full temporal resolution without artificial constraints.
+    \item \textbf{Mask ratio:} Non-monotonic with optimal at 0.85; aggressive masking forces robust representations.
+    \item \textbf{Window sizes:} Monotonic improvements with larger windows providing richer multi-scale context.
+\end{itemize}
+
+\subsection{Baseline Comparison}
+
+Table~\ref{tab:baseline} presents comprehensive 300-step forecast comparison.
+
+\begin{table}[htbp]
+\centering
+\caption{Performance comparison on 300-step forecast horizon}
+\label{tab:baseline}
+\small
+\begin{tabular}{lccccc}
+\toprule
+\textbf{Method} & \textbf{Traffic Acc.} & \textbf{Users Acc.} & \textbf{Avg Acc.} & \textbf{Avg $\rho$} & \textbf{CPI} \\
+\midrule
+LSTM & 86.34\% & 85.34\% & 85.84\% & $-$0.399 & 13.7 \\
+VisionTS & 92.01\% & 92.98\% & 92.50\% & 0.320 & 41.1 \\
+VAR & 91.26\% & 91.24\% & 91.25\% & 0.574 & 49.8 \\
+ARIMA & 88.18\% & 95.74\% & 91.96\% & 0.576 & 56.4 \\
+\textbf{BiViSIONTS} & \textbf{95.56\%} & \textbf{96.45\%} & \textbf{96.06\%} & \textbf{0.696} & \textbf{84.4} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Key Results:}
+\begin{itemize}
+    \item BiViSIONTS achieves 96.06\% accuracy, +10.22pp over LSTM (85.84\%), +3.56pp over VisionTS (92.50\%).
+    \item LSTM exhibits catastrophic trend-following failure (negative $\rho=-0.399$, $R^2=0.000$).
+    \item CPI of 84.4 demonstrates balanced excellence, +28.0 points over ARIMA, +43.3 over VisionTS.
+\end{itemize}
+
+Fig.~\ref{fig:bivisionts-forecast} illustrates BiViSIONTS forecasting performance with optimized multi-scale attention configuration.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{images/ablations/ablation bivisionts.png}
+\caption{BiViSIONTS forecasting performance under 300-step horizon with optimized multi-scale attention configuration. Top row: RGB encoding visualization showing input attention-weighted fusion ($\alpha_{final}=0.9144$) and MAE reconstruction (85\% masking). Middle panel: Traffic volume forecasting demonstrating 95.56\% accuracy with Pearson correlation $\rho=0.5303$ and $R^2=0.2812$. Bottom panel: Connected users forecasting achieving 96.45\% accuracy with $\rho=0.8617$ and $R^2=0.7425$. Orange lines represent ground truth, red/green dashed lines show BiViSIONTS predictions.}
+\label{fig:bivisionts-forecast}
+\end{figure}
+
+Fig.~\ref{fig:comprehensive-comparison} presents comprehensive performance visualization across all methods.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{images/ablations/ablation baselines.png}
+\caption{Comprehensive performance comparison across all evaluated methods. Top row: standard error metrics (MSE, MAE, RMSE, Success Rate) demonstrating BiViSIONTS' superior point-wise accuracy. Middle row: trend-following metrics (Pearson, Spearman, $R^2$) confirming excellent temporal pattern capture. Bottom left: Composite Performance Index (CPI) ranking synthesizing all seven metrics. Bottom right: Radar chart visualizing normalized performance profile across all dimensions, with BiViSIONTS (red) dominating across standard and trend-following metrics simultaneously.}
+\label{fig:comprehensive-comparison}
+\end{figure}
+
+\subsection{Ablation Studies}
+
+Table~\ref{tab:ablation} validates individual component contributions.
+
+\begin{table}[htbp]
+\centering
+\caption{Ablation study results on 300-step horizon}
+\label{tab:ablation}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Configuration} & \textbf{Avg Accuracy} & \textbf{$\Delta$ vs. Full} \\
+\midrule
+Full BiViSIONTS & 96.06\% & -- \\
+\midrule
+Single-scale (long-term only) & 94.59\% & $-$1.47\% \\
+Fixed uniform weighting ($\alpha=0.5$) & 95.45\% & $-$0.62\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Multi-scale attention:} +1.47\% improvement validates temporal decomposition capturing both transient fluctuations ($\rho=0.77$) and persistent trends ($\rho=0.98$).
+
+\textbf{Adaptive weighting:} +0.62\% confirms correlation-based allocation outperforms heuristic 50-50 blending.
+
+\subsection{Convergence Analysis}
+
+Across 1,000 iterations with optimal parameters:
+\begin{itemize}
+    \item \textbf{Traffic:} $\mu=95.46\%$, $\sigma=1.01\%$, range $[91.42\%, 96.83\%]$
+    \item \textbf{Users:} $\mu=95.75\%$, $\sigma=1.20\%$, range $[85.29\%, 97.50\%]$
+\end{itemize}
+
+Exceptionally low variance ($\sigma<1.21\%$) demonstrates reproducible predictions suitable for production deployment.
+
+\subsection{Cross-Dataset Validation}
+
+On Beijing Air Quality data (300-day horizon):
+\begin{itemize}
+    \item \textbf{BiViSIONTS:} 77.01\% success ($\rho=0.9528$, $R^2=0.9083$)
+    \item \textbf{ARIMA:} 0\% success (negative correlations: DEWP $\rho=-0.20$, TEMP $\rho=-0.49$)
+\end{itemize}
+
+Fig.~\ref{fig:beijing-validation} visualizes BiViSIONTS cross-dataset performance on the Beijing Air Quality dataset.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{images/cross-dataset validation/beijing air quality dataset bivisionts.png}
+\caption{BiViSIONTS forecast visualization for Beijing Air Quality Dataset. Top panels show RGB encoding (input and MAE reconstruction). Bottom panels display 300-day ahead predictions for dewpoint (DEWP, left) and ambient temperature (TEMP, right) with context windows, ground truth, and model forecasts. TEMP achieves 87.22\% success ($\rho=0.9753$, $R^2=0.9512$) while DEWP reaches 66.81\% ($\rho=0.9303$, $R^2=0.8655$), demonstrating cross-domain generalizability.}
+\label{fig:beijing-validation}
+\end{figure}
+
+BiViSIONTS achieves 92\% MSE improvement over ARIMA, validating cross-domain generalizability where traditional methods completely fail.
+
+%% =============================================================================
+%% SECTION 6: DISCUSSION
+%% =============================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Interpretation of Results}
+
+BiViSIONTS's superior performance stems from three synergistic innovations:
+
+\textbf{Bivariate encoding} exploits cross-variable correlations (0.77--0.98) absent in univariate methods. The +3.56pp improvement over VisionTS quantifies the value of inter-variable dependencies.
+
+\textbf{Multi-scale attention} captures scale-dependent dynamics: short-term independence ($\rho=0.77$) provides complementary signals, while long-term synchrony ($\rho=0.98$) stabilizes predictions. The +1.47\% ablation gain validates temporal decomposition necessity.
+
+\textbf{Zero-shot transfer} from ImageNet demonstrates that visual features (edges, textures) correspond to temporal patterns (trends, cycles). This eliminates extensive training requirements while achieving state-of-the-art accuracy.
+
+\subsection{Trend-Following Excellence}
+
+The dramatic contrast between BiViSIONTS ($\rho=0.696$, $R^2=0.512$) and LSTM ($\rho=-0.399$, $R^2=0.000$) reveals a critical insight: \textbf{trend-following metrics are essential for extended horizon evaluation}. Methods achieving acceptable point-wise error can completely fail directional prediction—a failure invisible to MAPE but catastrophic for strategic planning.
+
+\subsection{Practical Implications}
+
+\textbf{Telecommunications:} With 96.06\% accuracy and strong trend-following on 300-step (10-month) horizons, BiViSIONTS supports annual planning cycles, quarterly reviews, and infrastructure roadmaps. The 51\% variance explanation ($R^2=0.512$) provides sufficient confidence for commit-to-build decisions.
+
+\textbf{Broader applications:} The framework generalizes to any bivariate system ($\rho>0.5$) requiring extended forecasting: energy demand-temperature, healthcare admissions-resources, retail sales-foot traffic.
+
+\subsection{Limitations}
+
+\begin{enumerate}
+    \item \textbf{Bivariate constraint:} RGB encoding limits to two variables; $N>2$ requires architectural extensions.
+    \item \textbf{Fixed multi-scale weights:} Manual 0.5:0.3:0.2 weighting; learnable horizon-adaptive weights may improve performance.
+    \item \textbf{Correlation stationarity assumption:} Sudden regime shifts may require recalibration.
+    \item \textbf{Pre-training domain gap:} ImageNet features succeed but time series-specific pre-training could enhance results.
+\end{enumerate}
+
+\subsection{Comparison with State-of-the-Art}
+
+While Transformer-based methods (Informer, Autoformer, PatchTST) achieve strong results on standard benchmarks, they require extensive training and often assume univariate or weakly correlated multivariate settings. BiViSIONTS uniquely combines:
+\begin{itemize}
+    \item Zero-shot capability (no task-specific training)
+    \item Explicit bivariate correlation modeling
+    \item Multi-scale temporal attention
+    \item Interpretable attention weights ($\alpha_{final}=0.9144$)
+\end{itemize}
+
+%% =============================================================================
+%% SECTION 7: CONCLUSION
+%% =============================================================================
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper introduced BiViSIONTS, a novel framework extending vision-based time series forecasting to bivariate settings through multi-scale attention-weighted fusion. Our approach encodes correlated time series into RGB images with adaptive correlation-based channel weighting, leveraging pre-trained Vision Transformers for zero-shot forecasting.
+
+\textbf{Key findings:}
+\begin{enumerate}
+    \item BiViSIONTS achieves 96.06\% accuracy on 300-step horizons, substantially outperforming LSTM (+10.2pp), ARIMA (+4.1pp), and univariate VisionTS (+3.6pp).
+    \item Multi-scale attention contributes +1.47\% improvement; adaptive weighting adds +0.62\%.
+    \item Strong trend-following ($\rho=0.696$, $R^2=0.512$) contrasts with LSTM's complete failure ($\rho=-0.399$).
+    \item Cross-domain validation confirms generalizability (77% success where ARIMA achieves 0\%).
+    \item Exceptional stability ($\sigma<1.21\%$) ensures production-ready reliability.
+\end{enumerate}
+
+\textbf{Future directions:} Multivariate extension ($N>2$) via 3D convolutions or graph networks; learnable horizon-adaptive weights; time series-specific pre-training; uncertainty quantification through Bayesian approaches.
+
+BiViSIONTS demonstrates that unconventional approaches—treating time series as images, leveraging vision transformers—yield state-of-the-art extended horizon forecasting with remarkable simplicity and without task-specific training. The framework opens new directions for applying computer vision techniques to multivariate temporal prediction problems.
+
+%% =============================================================================
+%% DECLARATIONS
+%% =============================================================================
+
+\section*{CRediT authorship contribution statement}
+
+\textbf{Eng. H.K.S.N. Heendeniya:} Conceptualization, Methodology, Software, Validation, Formal analysis, Investigation, Data curation, Writing – original draft, Visualization.
+\textbf{Dr. Thanuja Ambegoda:} Supervision, Resources, Writing – review \& editing, Project administration.
+
+\section*{Declaration of competing interests}
+
+The authors declare that they have no known competing financial interests or personal relationships that could have appeared to influence the work reported in this paper.
+
+\section*{Data availability}
+
+The telecommunications dataset was provided by Dialog Axiata PLC under confidentiality agreement. The Beijing Air Quality dataset is publicly available at the UCI Machine Learning Repository. Code is available at: \url{https://github.com/sashikaheendeniya/BiViSIONTS}
+
+\section*{Acknowledgements}
+
+We thank Dialog Axiata PLC for providing the telecommunications dataset and domain expertise. We acknowledge the VisionTS authors for open-sourcing their codebase and the MAE team for releasing pre-trained weights.
+
+%% =============================================================================
+%% REFERENCES
+%% =============================================================================
+
+\section*{References}
+
+%% Use BibTeX with model5-names style for APA format
+%% \bibliography{references}
+
+%% Or include references manually:
+\begin{thebibliography}{99}
+
+\bibitem[Bai et al.(2018)]{bai2018}
+Bai, S., Kolter, J. Z., \& Koltun, V. (2018). An empirical evaluation of generic convolutional and recurrent networks for sequence modeling. \textit{arXiv preprint arXiv:1803.01271}.
+
+\bibitem[Box \& Jenkins(1970)]{box1970}
+Box, G. E. P., \& Jenkins, G. M. (1970). \textit{Time Series Analysis: Forecasting and Control}. Holden-Day.
+
+\bibitem[Cho et al.(2014)]{cho2014}
+Cho, K., van Merrienboer, B., Gulcehre, C., Bahdanau, D., Bougares, F., Schwenk, H., \& Bengio, Y. (2014). Learning phrase representations using RNN encoder-decoder for statistical machine translation. \textit{Proceedings of EMNLP}, 1724--1734.
+
+\bibitem[He et al.(2022)]{he2022mae}
+He, K., Chen, X., Xie, S., Li, Y., Dollár, P., \& Girshick, R. (2022). Masked autoencoders are scalable vision learners. \textit{Proceedings of CVPR}, 16000--16009.
+
+\bibitem[Hochreiter \& Schmidhuber(1997)]{hochreiter1997}
+Hochreiter, S., \& Schmidhuber, J. (1997). Long short-term memory. \textit{Neural Computation}, 9(8), 1735--1780.
+
+\bibitem[Holt(1957)]{holt1957}
+Holt, C. C. (1957). Forecasting seasonals and trends by exponentially weighted moving averages. \textit{ONR Memorandum}, 52.
+
+\bibitem[Li et al.(2018)]{li2018dcrnn}
+Li, Y., Yu, R., Shahabi, C., \& Liu, Y. (2018). Diffusion convolutional recurrent neural network: Data-driven traffic forecasting. \textit{Proceedings of ICLR}.
+
+\bibitem[Lim et al.(2021)]{lim2021}
+Lim, B., Arık, S. Ö., Loeff, N., \& Pfister, T. (2021). Temporal fusion transformers for interpretable multi-horizon time series forecasting. \textit{International Journal of Forecasting}, 37(4), 1748--1764.
+
+\bibitem[Liu et al.(2024)]{liu2024itransformer}
+Liu, Y., Hu, T., Zhang, H., Wu, H., Wang, S., Ma, L., \& Long, M. (2024). iTransformer: Inverted transformers are effective for time series forecasting. \textit{Proceedings of ICLR}.
+
+\bibitem[Nie et al.(2023)]{nie2023patchtst}
+Nie, Y., Nguyen, N. H., Sinthong, P., \& Kalagnanam, J. (2023). A time series is worth 64 words: Long-term forecasting with transformers. \textit{Proceedings of ICLR}.
+
+\bibitem[Oord et al.(2016)]{oord2016}
+Oord, A. van den, Dieleman, S., Zen, H., Simonyan, K., Vinyals, O., Graves, A., ... \& Kavukcuoglu, K. (2016). WaveNet: A generative model for raw audio. \textit{arXiv preprint arXiv:1609.03499}.
+
+\bibitem[Oreshkin et al.(2020)]{oreshkin2020}
+Oreshkin, B. N., Carpov, D., Chapados, N., \& Bengio, Y. (2020). N-BEATS: Neural basis expansion analysis for interpretable time series forecasting. \textit{Proceedings of ICLR}.
+
+\bibitem[Salinas et al.(2020)]{salinas2020}
+Salinas, D., Flunkert, V., Gasthaus, J., \& Januschowski, T. (2020). DeepAR: Probabilistic forecasting with autoregressive recurrent networks. \textit{International Journal of Forecasting}, 36(3), 1181--1191.
+
+\bibitem[Sims(1980)]{sims1980}
+Sims, C. A. (1980). Macroeconomics and reality. \textit{Econometrica}, 48(1), 1--48.
+
+\bibitem[Vaswani et al.(2017)]{vaswani2017}
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones, L., Gomez, A. N., ... \& Polosukhin, I. (2017). Attention is all you need. \textit{Proceedings of NeurIPS}, 5998--6008.
+
+\bibitem[VisionTS(2024)]{visionts2024}
+Chen, M., et al. (2024). VisionTS: Visual masked autoencoders are free-lunch zero-shot time series forecasters. \textit{arXiv preprint arXiv:2408.17253}.
+
+\bibitem[Wang \& Oates(2015)]{wang2015}
+Wang, Z., \& Oates, T. (2015). Imaging time-series to improve classification and imputation. \textit{Proceedings of IJCAI}, 3939--3945.
+
+\bibitem[Woo et al.(2022)]{woo2022cost}
+Woo, G., Liu, C., Sahoo, D., Kumar, A., \& Hoi, S. (2022). CoST: Contrastive learning of disentangled seasonal-trend representations for time series forecasting. \textit{Proceedings of ICLR}.
+
+\bibitem[Wu et al.(2019)]{wu2019graph}
+Wu, Z., Pan, S., Long, G., Jiang, J., \& Zhang, C. (2019). Graph wavenet for deep spatial-temporal graph modeling. \textit{Proceedings of IJCAI}, 1907--1913.
+
+\bibitem[Wu et al.(2021)]{wu2021autoformer}
+Wu, H., Xu, J., Wang, J., \& Long, M. (2021). Autoformer: Decomposition transformers with auto-correlation for long-term series forecasting. \textit{Proceedings of NeurIPS}, 22419--22430.
+
+\bibitem[Zhou et al.(2021)]{zhou2021informer}
+Zhou, H., Zhang, S., Peng, J., Zhang, S., Li, J., Xiong, H., \& Zhang, W. (2021). Informer: Beyond efficient transformer for long sequence time-series forecasting. \textit{Proceedings of AAAI}, 35(12), 11106--11115.
+
+\bibitem[Zhou et al.(2022)]{zhou2022fedformer}
+Zhou, T., Ma, Z., Wen, Q., Wang, X., Sun, L., \& Jin, R. (2022). FEDformer: Frequency enhanced decomposed transformer for long-term series forecasting. \textit{Proceedings of ICML}, 27268--27286.
+
+\end{thebibliography}
+
+\end{document}

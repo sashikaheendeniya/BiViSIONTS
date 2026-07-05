@@ -4,7 +4,7 @@
 
 BiViSIONTS (Bivariate Vision Transformer for Time Series) is a forecasting framework that turns two correlated time series into a single color image and asks a pretrained computer-vision model to "complete the picture" — where the completed region *is* the forecast. It requires **no training whatsoever**: the vision backbone stays frozen with its original ImageNet weights, yet it outperforms both classical statistical methods and state-of-the-art deep learning forecasters that were trained specifically on the target data.
 
-This is the research repository for an MSc thesis project (University of Moratuwa, in collaboration with Dialog Axiata PLC), where the method was developed for telecommunications capacity planning and validated on real network data plus a public environmental dataset. The full thesis is in [`latex/latex-thesis.txt`](latex/latex-thesis.txt).
+This is the research repository for an MSc thesis project (University of Moratuwa, in collaboration with Dialog Axiata PLC), where the method was developed for telecommunications capacity planning and validated on real network data plus a public environmental dataset. The full thesis is available as [`BiViSIONTS Thesis.pdf`](BiViSIONTS%20Thesis.pdf).
 
 ---
 
@@ -98,7 +98,7 @@ The RGB design naturally caps the method at **two variables**; extending to N > 
 
 ## Learn More
 
-- 📖 **Full thesis** — methodology, 216-configuration hyperparameter study, 1,000-iteration convergence analysis, complete ablation and baseline chapters: [`latex/latex-thesis.txt`](latex/latex-thesis.txt)
+- 📖 **Full thesis** — methodology, 216-configuration hyperparameter study, 1,000-iteration convergence analysis, complete ablation and baseline chapters: [`BiViSIONTS Thesis.pdf`](BiViSIONTS%20Thesis.pdf)
 - 📓 **Research notebooks** — end-to-end reproducible pipelines: `BiViSIONTS_INFO.ipynb` (telecom) and `BiViSIONTS_INFO_DATASET2.ipynb` (Beijing Air Quality)
 - 🖼️ **All result figures**: [`thesis_figures/`](thesis_figures/)
 

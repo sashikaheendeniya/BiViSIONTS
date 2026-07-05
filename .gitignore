@@ -10,10 +10,21 @@ dist.sh
 .venv/
 long_term_tsf/dataset/
 visionts_items/
-bivisionts_versions_n_backpus/
+journal_paper/
+thesis_figures/
+viva/
+latex/
+stage/
+versions/
+
 *.csv
 *.xlsx
 *.png
+*.docx
+*.jpg
+*
+
 # BiViSIONTS_INFO.ipynb
 BiViSIONTS_INFO_V*.ipynb
+BiViSIONTS_INFO_DATASET2_V*.ipynb
 VisionTS.ipynb

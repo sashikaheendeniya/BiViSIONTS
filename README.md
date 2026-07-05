@@ -100,7 +100,6 @@ The RGB design naturally caps the method at **two variables**; extending to N > 
 
 - 📖 **Full thesis** — methodology, 216-configuration hyperparameter study, 1,000-iteration convergence analysis, complete ablation and baseline chapters: [`BiViSIONTS Thesis.pdf`](BiViSIONTS%20Thesis.pdf)
 - 📓 **Research notebooks** — end-to-end reproducible pipelines: `BiViSIONTS_INFO.ipynb` (telecom) and `BiViSIONTS_INFO_DATASET2.ipynb` (Beijing Air Quality)
-- 🖼️ **All result figures**: [`thesis_figures/`](thesis_figures/)
 
 ## Acknowledgements
 

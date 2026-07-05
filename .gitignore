@@ -22,9 +22,5 @@ versions/
 *.png
 *.docx
 *.jpg
-*
 
-# BiViSIONTS_INFO.ipynb
-BiViSIONTS_INFO_V*.ipynb
-BiViSIONTS_INFO_DATASET2_V*.ipynb
 VisionTS.ipynb
